@@ -32,6 +32,8 @@ For a full list of available features, see the :doc:`features page <features>`.
   restarts are handled transparently.
 - Work with scalar data as produced by ``CarpetIOASCII`` or norms/reductions
   produced by ``CarpetX`` (:py:mod:`~.cactus_scalars`).
+- Work with volume integrals produced by ``VolumeIntegrals_GRMHD`` and
+  ``VolumeIntegrals_vacuum`` (:py:mod:`~.volumeintegrals`).
 - Analyze the multipolar decompositions output by ``Multipoles``
   (:py:mod:`~.cactus_multipoles`).
 - Analyze gravitational waves extracted with the Newman-Penrose formalism
@@ -103,6 +105,7 @@ Usage
    simdir.rst
    series.rst
    cactus_scalars.rst
+   volumeintegrals.rst
    cactus_multipoles.rst
    cactus_horizons.rst
    cactus_waves.rst
@@ -228,6 +231,7 @@ Reference material (classes, functions, ...)
    frequencyseries_ref.rst
    cactus_grid_functions_ref.rst
    cactus_scalars_ref.rst
+   volumeintegrals_ref.rst
    cactus_multipoles_ref.rst
    cactus_waves_ref.rst
    cactus_horizons_ref.rst

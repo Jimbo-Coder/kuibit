@@ -50,6 +50,7 @@ from kuibit import (
     cactus_scalars,
     cactus_timers,
     cactus_twopunctures,
+    volumeintegrals,
     cactus_waves,
 )
 
@@ -133,6 +134,9 @@ class SimDir:
                           :py:class:`~.HorizonsDir`.
     :ivar timers:         Timer information, see
                           :py:class:`~.TimersDir`.
+    :ivar volumeintegrals:
+                          VolumeIntegrals output, see
+                          :py:class:`~.VolumeIntegralsDir`.
     :ivar twopunctures:   Metadata information from TwoPunctures.
                           :py:class:`~.TwoPuncturesDir`.
     :ivar multipoles:     Multipole components, see
@@ -280,6 +284,7 @@ class SimDir:
         self.__gridfunctions = None
         self.__horizons = None
         self.__timers = None
+        self.__volumeintegrals = None
         self.__twopunctures = None
 
         if (pickle_file is None) or (not os.path.exists(pickle_file)):
@@ -305,6 +310,7 @@ class SimDir:
         self.__gridfunctions = None
         self.__horizons = None
         self.__timers = None
+        self.__volumeintegrals = None
         self.__twopunctures = None
 
     def rescan(self):
@@ -401,6 +407,19 @@ class SimDir:
         return self.__timers
 
     @property
+    def volumeintegrals(self):
+        """Return all the available VolumeIntegrals data.
+
+        :returns: Interface to the VolumeIntegrals output.
+        :rtype: :py:class:`~.VolumeIntegralsDir`
+        """
+        if self.__volumeintegrals is None:
+            self.__volumeintegrals = volumeintegrals.VolumeIntegralsDir(self)
+        return self.__volumeintegrals
+
+    volints = volumeintegrals
+
+    @property
     def twopunctures(self):
         """Return the metadata for TwoPunctures.
 
@@ -431,6 +450,8 @@ class SimDir:
 
         hor_ret = f"{self.horizons}"
 
+        volints_ret = f"\n{self.volints}"
+
         tim_ret = f"\n{self.timers}"
 
         return (
@@ -441,6 +462,7 @@ class SimDir:
             + em_ret
             + gf_ret
             + hor_ret
+            + volints_ret
             + tim_ret
         )
 

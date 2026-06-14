@@ -29,8 +29,6 @@ Python required to complete the task.
 * Perform interpolation in shapes of `AHFinderDirect` to better find shapes when
   the cut is not on a major direction. [==]
 
-* Add support for `VolumeIntegral` thorns to `cactus_scalars`. [==]
-
 * Hunt for TODOs in the codebase and implement them. [=?=]
 
 ## Infrastructure

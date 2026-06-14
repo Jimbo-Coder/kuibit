@@ -89,6 +89,14 @@ decompositions`):
 
     multipoles = sim.multipoles
 
+For volume integrals (documentation: :ref:`volumeintegrals:VolumeIntegrals
+data`):
+
+.. code-block:: python
+
+    volume_integrals = sim.volints
+    # or volume_integrals = sim.volumeintegrals
+
 Some useful conventions
 ------------------------
 
@@ -183,4 +191,3 @@ ________________
 
 When in doubt, you can always try to ``print`` an object. Most classes will tell
 you what they are storing.
-
