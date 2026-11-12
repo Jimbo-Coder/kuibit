@@ -17,6 +17,7 @@
 
 import os
 import unittest
+import warnings
 from tempfile import TemporaryDirectory
 from unittest import mock
 
@@ -734,8 +735,10 @@ class TestOneGridFunctionTSV(unittest.TestCase):
                     ccoordx._components_in_file(path, iteration, 1), [0, 1]
                 )
 
-        for iteration in (0, 6):
-            data = ccoordx[iteration]
+        for iteration in ccoordx.available_iterations:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                data = ccoordx[iteration]
             self.assertEqual(data.shape, {0: 1, 1: 2})
             for level, component in ((0, 0), (1, 0), (1, 1)):
                 self.assert_coordinates(data[level][component], 0)
@@ -767,6 +770,10 @@ class TestOneGridFunctionTSV(unittest.TestCase):
     def test_carpetx_tsv_array(self):
         reader = self.sim.gf.x
         # Grid arrays have no ghost zones, so num_ghost does not apply to them
+        # and no warning is emitted when num_ghost is None
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            radius = reader["radius[0]"]
         reader.num_ghost = (1,)
         radius = reader["radius[0]"]
 
@@ -901,6 +908,18 @@ class TestOneGridFunctionTSVSynthetic(unittest.TestCase):
         self.assertCountEqual(components[1][0], [0])
         self.assertEqual(reader.time_at_iteration(1), 0.5)
 
+        # Duplicate iterations in the same 1D file (e.g., from an appended
+        # restart) keep the latest values at each grid index.
+        rows = [
+            [0, 0.0, 0, 0, 0, 0, 0, 0.0, 0, 0, 1.0],
+            [0, 0.0, 0, 0, 1, 0, 0, 1.0, 0, 0, 2.0],
+            [0, 0.0, 0, 0, 0, 0, 0, 0.0, 0, 0, 10.0],
+            [0, 0.0, 0, 0, 1, 0, 0, 1.0, 0, 0, 20.0],
+        ]
+        path = self._write_tsv(rows, filename="test-dup.x.tsv")
+        reader = cg.OneGridFunctionTSV([path], "rho", num_ghost=(0,))
+        np.testing.assert_array_equal(reader[0][0][0].data, [10.0, 20.0])
+
     def test_3d_rows_in_any_order(self):
         rows = []
         for iteration, level, component in np.ndindex(2, 2, 2):
@@ -933,10 +952,12 @@ class TestOneGridFunctionTSVSynthetic(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Incomplete"):
             cg.OneGridFunctionTSV([path], "rho")
 
-        rows[0][2] = 1  # patch
-        path = self._write_tsv(rows, is_3d=True)
-        with self.assertRaisesRegex(NotImplementedError, "patch 0"):
-            cg.OneGridFunctionTSV([path], "rho")
+        extra_patch_row = list(rows[0])
+        extra_patch_row[2] = 1  # patch
+        path = self._write_tsv(rows + [extra_patch_row], is_3d=True)
+        with self.assertWarnsRegex(RuntimeWarning, "patch 0"):
+            reader = cg.OneGridFunctionTSV([path], "rho", num_ghost=(0, 0, 0))
+        self.assertEqual(reader[0].shape, {0: 1})
 
 
 class TestOneGridFunctionOpenPMD(unittest.TestCase):

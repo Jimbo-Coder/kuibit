@@ -273,6 +273,7 @@ def scan_header(
     all_reductions_in_one_file=False,
     opener=open,
     opener_mode="r",
+    all_reductions_format="carpet",  # Deprecated: no-op, will be removed
 ):
     """Use regular expressions to understand the content of a CarpetASCII file.
     In particular, we look for column format and data columns by reading the

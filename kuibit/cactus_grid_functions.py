@@ -458,7 +458,7 @@ class BaseOneGridFunction(ABC):
 
         uniform_grid_data_components = []
 
-        for path in self.allfiles:
+        for path in self._files_with_iteration(iteration):
             for ref_level in self._ref_levels_in_file(path, iteration):
                 for comp in self._components_in_file(
                     path, iteration, ref_level
@@ -920,6 +920,7 @@ class OneGridFunctionTSV(OneGridFunctionASCII):
     _rx_filename = re.compile(
         r"^\w+-\w+(?:(?:\.it\d+)?\.(?P<axis>[xyz])|\.it\d+\.p\d+)\.tsv$"
     )
+    _is_grid_function = False
 
     # Columns that CarpetX writes before the grid functions (see
     # CarpetX/src/io_tsv.cxx). 3D files also have a component column after the
@@ -1043,6 +1044,7 @@ class OneGridFunctionTSV(OneGridFunctionASCII):
 
         metadata, variables = self._scan_header(path, is_3d)
         is_grid_function = "patch" in metadata
+        self._is_grid_function = is_grid_function
 
         var_columns = variables[self.var_name]
         if not isinstance(var_columns, tuple):
@@ -1058,12 +1060,27 @@ class OneGridFunctionTSV(OneGridFunctionASCII):
         )
         # The loaded columns are in the order we asked for
         metadata = {name: column for column, name in enumerate(metadata)}
-        values = data[:, len(metadata)]
-        if len(var_columns) == 2:
-            values = values + 1j * data[:, len(metadata) + 1]
 
         def column(name):
             return data[:, metadata[name]].astype(int)
+
+        if is_grid_function:
+            if np.any(column("patch") != 0):
+                warnings.warn(
+                    f"Only patch 0 is supported for CarpetX TSV files ({path})",
+                    RuntimeWarning,
+                )
+                data = data[column("patch") == 0]
+            ref_levels = column("level")
+            coordinates = data[:, [metadata[axis] for axis in axes]]
+        else:
+            # Grid arrays are on refinement level -1, as in ASCII files
+            ref_levels = np.full(len(data), -1)
+            coordinates = None
+
+        values = data[:, len(metadata)]
+        if len(var_columns) == 2:
+            values = values + 1j * data[:, len(metadata) + 1]
 
         iterations = column("iteration")
         axis_to_index = {"x": "i", "y": "j", "z": "k"}
@@ -1072,18 +1089,6 @@ class OneGridFunctionTSV(OneGridFunctionASCII):
         components = (
             column("component") if is_3d else np.zeros_like(iterations)
         )
-
-        if is_grid_function:
-            if np.any(column("patch") != 0):
-                raise NotImplementedError(
-                    f"Only patch 0 is supported for CarpetX TSV files ({path})"
-                )
-            ref_levels = column("level")
-            coordinates = data[:, [metadata[axis] for axis in axes]]
-        else:
-            # Grid arrays are on refinement level -1, as in ASCII files
-            ref_levels = np.full_like(iterations, -1)
-            coordinates = None
 
         unique_iterations, first_rows = np.unique(
             iterations, return_index=True
@@ -1105,6 +1110,11 @@ class OneGridFunctionTSV(OneGridFunctionASCII):
             if is_3d:
                 pieces = [(component, rows)]
             else:
+                # If a restart appended to this file, keep the last row at each index.
+                _, unique_indices = np.unique(
+                    indices[rows[::-1], 0], return_index=True
+                )
+                rows = rows[len(rows) - 1 - unique_indices]
                 # 1D components are separated by gaps in the indices. As in
                 # ASCII files, the components of grid arrays start at -1.
                 gaps = np.flatnonzero(np.diff(indices[rows, 0]) != 1) + 1
@@ -2113,17 +2123,19 @@ class AllGridFunctions:
                     num_ghost=self.num_ghost,
                 )
             elif var_name in self._vars_tsv_files:
-                if self.num_ghost is None:
-                    warnings.warn(
-                        "You are using CarpetX TSV files, which have no information"
-                        " about ghost zone information. Set the attribute num_ghost"
-                        " of this object to properly account for the ghost zones. "
-                    )
                 self._vars[var_name] = OneGridFunctionTSV(
                     self._vars_tsv_files[var_name],
                     var_name,
                     num_ghost=self.num_ghost,
                 )
+                if self._vars[var_name]._is_grid_function and (
+                    self.num_ghost is None
+                ):
+                    warnings.warn(
+                        "You are using CarpetX TSV files, which have no information"
+                        " about ghost zone information. Set the attribute num_ghost"
+                        " of this object to properly account for the ghost zones. "
+                    )
 
         return self._vars[var_name]
 

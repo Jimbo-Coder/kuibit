@@ -452,8 +452,10 @@ patch 0. It also supports real or complex 1D grid arrays. See
 :ref:`features:Grid Data` for supported output options.
 
 In case you are reading an ASCII or TSV file, you have to set the correct number
-of ghost zones. The simplest way to do this is to set the :py:meth:`~.num_ghost`
-attribute. If the output does not contain ghost zones, set them to zero.
+of ghost zones (for ``CarpetX``, whether boundary/ghost points are included is
+controlled by ``CarpetX::out_tsv_output_boundary_points``). The simplest way to do
+this is to set the :py:meth:`~.num_ghost` attribute. If the output does not
+contain ghost zones, set them to zero.
 
 .. code-block:: python
 
